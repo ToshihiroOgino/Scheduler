@@ -10,6 +10,7 @@ namespace Scheduler.src
   class Scheduler
   {
     private List<PseudoProcess> Processes;
+    private List<PseudoProcess> _standby_queue;
     private List<PseudoProcess> _incomplete_queue;
     private List<PseudoProcess> _completed_queue;
     private int _num_of_processes;
@@ -20,6 +21,7 @@ namespace Scheduler.src
     public Scheduler(AlgorithmType algorithm)
     {
       Processes = new();
+      _standby_queue = new();
       _incomplete_queue = new();
       _completed_queue = new();
       GetInput();
@@ -29,10 +31,13 @@ namespace Scheduler.src
     public void Run(AlgorithmType algorithm)
     {
       // キューを初期化
-      _incomplete_queue = new(Processes);
+      _standby_queue = new(Processes);
+      _incomplete_queue = new();
       _completed_queue = new();
       // 時刻を初期化
       _system_time = 0;
+      // 到着時刻順にソート
+      _standby_queue.Sort((a, b) => a.CompareArrivalTimeTo(b));
 
       switch (algorithm)
       {
@@ -64,8 +69,32 @@ namespace Scheduler.src
     private void FCFS()
     {
       System.Console.WriteLine("到着順でプロセスを消化します");
-      _incomplete_queue.Sort((a, b) => a.CompareArrivalTimeTo(b));
-      ExecuteAll();
+
+      // キューを順番に実行
+      while (true)
+      {
+        // 待機キューも未完了キューも空の場合終了する
+        if ((_incomplete_queue.Count() + _standby_queue.Count() == 0))
+          return;
+
+        // 未完了キューを更新
+        MoveArrivalProcess();
+        _system_time++;
+
+        // まだプロセスが到着していない場合は到着するまで時間を進める
+        if (_incomplete_queue.Count() == 0)
+          continue;
+
+        // キューの先頭を実行
+        _incomplete_queue[0].Execute(_system_time);
+
+        // プロセスが完了したら完了済みキューに追加し、未完了キューから削除する
+        if (_incomplete_queue[0].isDone)
+        {
+          _completed_queue.Add(_incomplete_queue[0]);
+          _incomplete_queue.RemoveAt(0);
+        }
+      }
     }
 
     /// <summary>
@@ -74,26 +103,46 @@ namespace Scheduler.src
     private void SPT()
     {
       System.Console.WriteLine("処理時間順でプロセスを消化します");
-      _incomplete_queue.Sort((a, b) => a.CompareTimeToProcessTo(b));
-      ExecuteAll();
-    }
 
-    /// <summary>
-    /// _incomplete_queueを初めから順番に消化する関数
-    /// FCFSとSPTでは、プロセスを並べ替えた後の共通処理
-    /// </summary>
-    private void ExecuteAll()
-    {
-      while (_incomplete_queue.Count() != 0)
+      // 初めのプロセスを読み込む
+      _incomplete_queue.Add(_standby_queue[0]);
+      _standby_queue.RemoveAt(0);
+      _system_time = _incomplete_queue[0].Arrival_Time;
+
+      // キューを処理時間順に実行
+      while (true)
       {
+        // 待機キューも未完了キューも空の場合終了する
+        if ((_incomplete_queue.Count() + _standby_queue.Count() == 0))
+          break;
+
         // まだプロセスが到着していない場合は到着するまで時間を進める
-        if (_incomplete_queue[0].Arrival_Time > _system_time)
-          _system_time = _incomplete_queue[0].Arrival_Time;
+        if (_incomplete_queue.Count() == 0)
+        {
+          // 未完了キューを更新
+          MoveArrivalProcess();
+          _system_time++;
+        }
+
+        // 未完了キューを実行時間順にソート
+        _incomplete_queue.Sort((a, b) => a.CompareTimeToProcessTo(b));
+
         // プロセスが完了するまで実行し続ける
-        _incomplete_queue[0].Execute(_incomplete_queue[0].Time_to_Process, ref _system_time);
-        // 完了済みキューに追加し、未完了キューから削除する
-        _completed_queue.Add(_incomplete_queue[0]);
-        _incomplete_queue.RemoveAt(0);
+        while (true)
+        {
+          _system_time++;
+          // 未完了キューを更新
+          MoveArrivalProcess();
+          // 先頭のプロセスを実行
+          _incomplete_queue[0].Execute(_system_time);
+          if (_incomplete_queue[0].isDone)
+          {
+            // 完了済みキューに追加し、未完了キューから削除する
+            _completed_queue.Add(_incomplete_queue[0]);
+            _incomplete_queue.RemoveAt(0);
+            break;
+          }
+        }
       }
     }
 
@@ -104,40 +153,74 @@ namespace Scheduler.src
     private void RR(uint const_time)
     {
       System.Console.WriteLine("ラウンドロビン式でプロセスを消化します");
-      // 到着時刻順にソート
-      _incomplete_queue.Sort((a, b) => a.CompareArrivalTimeTo(b));
-      // 初めのキューが来るまで時間を進める
+
+      // 初めのプロセスを読み込む
+      _incomplete_queue.Add(_standby_queue[0]);
+      _standby_queue.RemoveAt(0);
       _system_time = _incomplete_queue[0].Arrival_Time;
-      while (_incomplete_queue.Count() != 0)
+
+      int count = 0;
+      while (true)
       {
-        // キューの長さが2以上ならラウンドロビンで処理する
-        if (_incomplete_queue.Count() > 2)
-          for (int i = 0; i < _incomplete_queue.Count(); i++)
-          {
-            // まだプロセスが到着していない場合は初めに戻る
-            if (_incomplete_queue[i].Arrival_Time > _system_time)
-              break;
-            _incomplete_queue[i].Execute(const_time, ref _system_time);
-            if (_incomplete_queue[i].isDone)
-            {
-              // 処理を完了した場合、完了済みキューに追加し、未完了キューから削除する
-              _completed_queue.Add(_incomplete_queue[i]);
-              _incomplete_queue.RemoveAt(i);
-            }
-          }
-        // キューが残り一つの場合、ラウンドロビンをやめる
-        else
+        // 待機キューも未完了キューも空の場合終了する
+        if ((_incomplete_queue.Count() + _standby_queue.Count() == 0))
+          return;
+
+        _system_time++;
+
+        // 未完了キューを更新
+        MoveArrivalProcess();
+
+        // まだプロセスが到着していない場合は到着するまで時間を進める
+        if (_incomplete_queue.Count() == 0)
+          continue;
+
+        count++;
+        // 先頭のプロセスを実行
+        _incomplete_queue[0].Execute(_system_time);
+
+        if (_incomplete_queue[0].isDone)
         {
-          // まだプロセスが到着していない場合は到着するまで時間を進める
-          if (_incomplete_queue[0].Arrival_Time > _system_time)
-            _system_time = _incomplete_queue[0].Arrival_Time;
-          // プロセスが完了するまで実行し続ける
-          _incomplete_queue[0].Execute(_incomplete_queue[0].Time_to_Process, ref _system_time);
-          // 完了済みキューに追加し、未完了キューから削除する
+          // 処理を完了した場合、完了済みキューに追加し、未完了キューから削除する
+          count = 0;
           _completed_queue.Add(_incomplete_queue[0]);
           _incomplete_queue.RemoveAt(0);
         }
+        else if (count == const_time)
+        {
+          // 定時間が経過したら実行中のプロセスを一番後ろに回す
+          count = 0;
+          _incomplete_queue.Add(_incomplete_queue[0]);
+          _incomplete_queue.RemoveAt(0);
+        }
       }
+    }
+
+    /// <summary>
+    /// _system_timeに到着したキューを探索して未完了キューに移動させる関数
+    /// </summary>
+    private void MoveArrivalProcess()
+    {
+      if (_standby_queue.Count() == 0)
+        return;
+
+      List<int> list = new();
+      for (int i = 0; i < _standby_queue.Count(); i++)
+      {
+        if (_standby_queue[i].Arrival_Time == _system_time)
+        {
+          // 到着したキューを未完了キューに移動させる
+          _incomplete_queue.Add(_standby_queue[i]);
+          list.Add(i);
+        }
+        else if (_standby_queue[i].Arrival_Time > _system_time)
+          // これ以上先に到着したプロセスがない場合に探索を終了する
+          break;
+      }
+
+      // 移動済みのプロセスを待機列から削除
+      foreach (int idx in list)
+        _standby_queue.RemoveAt(idx);
     }
 
     /// <summary>
