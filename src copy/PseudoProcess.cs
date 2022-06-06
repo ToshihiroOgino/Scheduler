@@ -72,25 +72,38 @@ namespace Scheduler.src
     }
 
     /// <summary>
-    /// プロセスを単位時間実行する
+    /// プロセスを実行する
     /// </summary>
-    public void Execute(uint system_time)
+    /// <param name="system_time">実行時の時間</param>
+    /// <param name="given_time">実行可能時間</param>
+    public void Execute(uint given_time, ref uint system_time)
     {
+      // すでに実行が完了されているか、まだプロセスが到着していない場合は何もしない
+      if (_isDone || system_time < Arrival_Time || given_time == 0)
+        return;
+
       // 初めてプロセスを実行する時間を記録する
       if (Progress == 0)
         _start_time = system_time;
 
-      System.Console.Write("t={0}| プロセス:{1} | ", system_time, Name);
+      System.Console.Write("プロセス:{0}を実行 (Time={1}) | ", Name, system_time);
 
-      _progress++;
+      // 完了に必要な時間が実行可能時間以上なら実行可能時間、未満なら必要な時間だけ進める
+      uint useTime = 0, timeLeft = Time_to_Process - Progress;
+      if (given_time <= timeLeft)
+        useTime = given_time;
+      else
+        useTime = timeLeft;
+      _progress += useTime;
+      system_time += useTime;
       if (Time_to_Process == Progress)
       {
         _isDone = true;
         _end_time = system_time;
-        System.Console.WriteLine("完了 | 応答時間:{0}", Turn_Around_Time);
+        System.Console.WriteLine("完了 (Time={0}) | 応答時間:{1}", system_time, Turn_Around_Time);
         return;
       }
-      System.Console.WriteLine("{0}/{1}", Progress, Time_to_Process);
+      System.Console.WriteLine("中断:{0}/{1}", Progress, Time_to_Process);
       return;
     }
 
@@ -103,6 +116,20 @@ namespace Scheduler.src
       if (Arrival_Time == pp.Arrival_Time)
         return 0;
       else if (Arrival_Time > pp.Arrival_Time)
+        return 1;
+      else
+        return -1;
+    }
+
+    /// <summary>
+    /// List型の機能で処理時間をもとにSortできるようにするための関数
+    /// </summary>
+    /// <param name="pp">比較対象</param>
+    public int CompareTimeToProcessTo(PseudoProcess pp)
+    {
+      if (Time_to_Process == pp.Time_to_Process)
+        return 0;
+      else if (Time_to_Process > pp.Time_to_Process)
         return 1;
       else
         return -1;
