@@ -56,10 +56,6 @@ C 3 7
 D 5 3
 ```
 
-## Licence
-
-[MIT](https://licenses.opensource.jp/MIT/MIT.html)
-
 ## Author
 
 [Toshihiro Ogino](https://github.com/ToshihiroOgino)
