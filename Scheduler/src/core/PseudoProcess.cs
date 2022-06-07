@@ -1,4 +1,4 @@
-namespace Scheduler.src
+namespace Scheduler.src.core
 {
   class PseudoProcess
   {
@@ -13,12 +13,6 @@ namespace Scheduler.src
     public uint Arrival_Time { get; }
 
     /// <summary>
-    /// 処理を開始した時刻
-    /// </summary>
-    public uint Start_Time { get { return _start_time; } }
-    private uint _start_time;
-
-    /// <summary>
     /// 処理が終了した時刻
     /// </summary>
     public uint End_Time { get { return _end_time; } }
@@ -31,7 +25,7 @@ namespace Scheduler.src
     {
       get
       {
-        if (isDone)
+        if (IsDone)
           return End_Time - Arrival_Time;
         else
           throw new Exception("処理の完了していないプロセスの応答時間を計算することはできません");
@@ -46,7 +40,7 @@ namespace Scheduler.src
     /// <summary>
     /// 処理が完了しているかどうか
     /// </summary>
-    public bool isDone { get { return _isDone; } }
+    public bool IsDone { get { return _isDone; } }
     private bool _isDone;
 
     private uint _progress;
@@ -76,22 +70,25 @@ namespace Scheduler.src
     /// </summary>
     public void Execute(uint system_time)
     {
-      // 初めてプロセスを実行する時間を記録する
-      if (Progress == 0)
-        _start_time = system_time;
+      // 既に完了済みなら何もしない
+      if (IsDone)
+        return;
 
-      System.Console.Write("t={0}| プロセス:{1} | ", system_time, Name);
-
+      // 進捗を更新する
       _progress++;
+
+      System.Console.Write("t={0}| プロセス:{1} ({2}/{3}) | ", system_time, Name, Progress, Time_to_Process);
+
+      // プロセスが終了しているかを判定する
       if (Time_to_Process == Progress)
       {
         _isDone = true;
         _end_time = system_time;
-        System.Console.WriteLine("完了 | 応答時間:{0}", Turn_Around_Time);
+        System.Console.WriteLine("完了 | 応答時間={0}", Turn_Around_Time);
         return;
       }
-      System.Console.WriteLine("{0}/{1}", Progress, Time_to_Process);
-      return;
+
+      System.Console.WriteLine("");//改行
     }
 
     /// <summary>
