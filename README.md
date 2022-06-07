@@ -58,7 +58,7 @@ D 5 3
 
 ## Licence
 
-[MIT](https://github.com/tcnksm/tool/blob/master/LICENCE)
+[MIT](https://licenses.opensource.jp/MIT/MIT.html)
 
 ## Author
 
