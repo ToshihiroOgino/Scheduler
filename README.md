@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 Scheduler
 ====
 
@@ -63,3 +64,6 @@ D 5 3
 ## Author
 
 [Toshihiro Ogino](https://github.com/ToshihiroOgino)
+=======
+# Scheduler
+>>>>>>> 9b840a9cb4482a0d15621565ca4f80ccecb192d0
