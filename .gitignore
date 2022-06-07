@@ -264,3 +264,4 @@ FakesAssemblies/
 *.opt
 
 *.code-workspace
+.vscode/
