@@ -23,10 +23,6 @@ namespace Scheduler.src
         // 更新
         queue.Update(System_Time);
 
-        /*foreach (var item in queue.incomplete_queue)
-          Console.Write(item.Name + " ");
-        System.Console.WriteLine("");*/
-
         // まだプロセスが到着していない場合は到着するまで時間を進める
         if (queue.Incomplete.Count == 0)
         {
