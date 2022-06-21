@@ -11,28 +11,31 @@ namespace Scheduler.src.core
         /// <summary>
         /// まだ到着していないプロセスの待機キュー
         /// </summary>
-        public List<PseudoProcess> Standby;
+        private List<PseudoProcess> _standby;
         /// <summary>
         ///  実行中の未完了キュー
         /// </summary>
-        public List<PseudoProcess> Incomplete;
+        private List<PseudoProcess> _incomplete;
         /// <summary>
         /// 完了済みプロセスのキュー
         /// </summary>
-        public List<PseudoProcess> Completed;
+        private List<PseudoProcess> _completed;
 
         public ProsessQueue()
         {
-            Standby = new();
-            Incomplete = new();
-            Completed = new();
+            _standby = new();
+            _incomplete = new();
+            _completed = new();
         }
 
         /// <summary>
         /// 待機と実行中のキューが空かどうか
         /// </summary>
-        /// <returns>キューが空ならtrue</returns>
-        public bool IsEmpty { get { return (Incomplete.Count == 0) && (Standby.Count == 0); } }
+        /// <returns>待機と実行中のキューがどちらも空ならtruetrue</returns>
+        public bool IsEmpty { get { return (_incomplete.Count == 0) && (_standby.Count == 0); } }
+
+        /// <value>未完了キューの要素数</value>
+        public int GetIncompleteQueueCount { get { return _incomplete.Count; } }
 
         /// <summary>
         /// キューの初期化
@@ -68,7 +71,7 @@ namespace Scheduler.src.core
         /// <param name="p">追加するプロセス</param>
         public void CreateProcess(string name, uint arrival_time, uint time_to_process)
         {
-            Standby.Add(new PseudoProcess(name, arrival_time, time_to_process));
+            _standby.Add(new PseudoProcess(name, arrival_time, time_to_process));
         }
 
         /// <summary>
@@ -78,10 +81,10 @@ namespace Scheduler.src.core
         /// <returns>完了したときtrueを返す</returns>
         public bool ExecuteFront(uint system_time)
         {
-            if (Incomplete[0].IsDone)
+            if (_incomplete[0].IsDone)
                 return true;
-            Incomplete[0].Execute(system_time);
-            return Incomplete[0].IsDone;
+            _incomplete[0].Execute(system_time);
+            return _incomplete[0].IsDone;
         }
 
         /// <summary>
@@ -89,18 +92,18 @@ namespace Scheduler.src.core
         /// </summary>
         public void TurnProcess()
         {
-            if (Incomplete.Count == 0)
+            if (_incomplete.Count == 0)
                 return;
 
-            if (Incomplete[0].IsDone)
+            if (_incomplete[0].IsDone)
             {
-                Completed.Add(Incomplete[0]);
-                Incomplete.RemoveAt(0);
+                _completed.Add(_incomplete[0]);
+                _incomplete.RemoveAt(0);
             }
             else
             {
-                Incomplete.Add(Incomplete[0]);
-                Incomplete.RemoveAt(0);
+                _incomplete.Add(_incomplete[0]);
+                _incomplete.RemoveAt(0);
             }
         }
 
@@ -114,24 +117,24 @@ namespace Scheduler.src.core
                 return;
 
             // 到着したプロセスを未完了キューに移動
-            for (int i = 0; i < Standby.Count; i++)
+            for (int i = 0; i < _standby.Count; i++)
             {
-                if (Standby[i].Arrival_Time <= system_time)
+                if (_standby[i].Arrival_Time <= system_time)
                 {
                     // 到着したキューを未完了キューに移動させる
-                    Incomplete.Add(Standby[i]);
-                    Standby.RemoveAt(i);
+                    _incomplete.Add(_standby[i]);
+                    _standby.RemoveAt(i);
                     i--;
                 }
             }
 
             // 完了済みのタスクを削除
-            for (int i = 0; i < Incomplete.Count; i++)
+            for (int i = 0; i < _incomplete.Count; i++)
             {
-                if (Incomplete[i].IsDone)
+                if (_incomplete[i].IsDone)
                 {
-                    Completed.Add(Incomplete[i]);
-                    Incomplete.RemoveAt(i);
+                    _completed.Add(_incomplete[i]);
+                    _incomplete.RemoveAt(i);
                     i--;
                 }
             }
@@ -142,7 +145,7 @@ namespace Scheduler.src.core
         /// </summary>
         public void SortByArrivalTime()
         {
-            Standby.Sort((a, b) => a.CompareArrivalTimeTo(b));
+            _standby.Sort((a, b) => a.CompareArrivalTimeTo(b));
         }
 
         /// <summary>
@@ -150,7 +153,7 @@ namespace Scheduler.src.core
         /// </summary>
         public void SortByTimeToProcess()
         {
-            Incomplete.Sort((a, b) => a.CompareTimeToProcessTo(b));
+            _incomplete.Sort((a, b) => a.CompareTimeToProcessTo(b));
         }
 
         /// <summary>
@@ -160,9 +163,9 @@ namespace Scheduler.src.core
         public float AverageTurnAroundTime()
         {
             float ave = 0;
-            foreach (PseudoProcess p in Completed)
+            foreach (PseudoProcess p in _completed)
                 ave += p.Turn_Around_Time;
-            ave /= Completed.Count;
+            ave /= _completed.Count;
             return ave;
         }
     }

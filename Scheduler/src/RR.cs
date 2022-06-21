@@ -24,7 +24,7 @@ namespace Scheduler.src
                 queue.Update(System_Time);
 
                 // まだプロセスが到着していない場合は到着するまで時間を進める
-                if (queue.Incomplete.Count == 0)
+                if (queue.GetIncompleteQueueCount == 0)
                 {
                     UpdateSystemTime();
                     continue;
